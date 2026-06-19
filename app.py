@@ -46,12 +46,18 @@ int main() {
 if "source_code_input" not in st.session_state:
     st.session_state["source_code_input"] = DEFAULT_CODE
 
+# Unique counter for st_ace component key to force reset on clear
+if "editor_counter" not in st.session_state:
+    st.session_state["editor_counter"] = 0
+
 
 def clear_text():
     """
-    Clear the source code input from the session state.
+    Clear the source code input from the session state and
+    increment the key counter to force recreate the st_ace editor.
     """
     st.session_state["source_code_input"] = ""
+    st.session_state["editor_counter"] += 1
 
 
 def strip_inline_comment(line):
@@ -198,14 +204,14 @@ if uploaded_file is not None:
     except UnicodeDecodeError:
         st.error("Could not read the file. Please upload a plain text source file.")
 
-# Text editor configuration using Streamlit Ace
+# Text editor configuration using Streamlit Ace with dynamic combined key string
 code = st_ace(
     value=st.session_state["source_code_input"],
     language="c_cpp",
     theme="monokai",
     show_gutter=True,
     auto_update=True,
-    key="editor"
+    key=f"editor_{st.session_state['editor_counter']}"
 )
 
 st.session_state["source_code_input"] = code
