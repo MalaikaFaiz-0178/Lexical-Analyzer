@@ -52,22 +52,11 @@ if "editor_counter" not in st.session_state:
 
 
 def clear_text():
-    """
-    Clear the source code input from the session state and
-    increment the key counter to force recreate the st_ace editor.
-    """
     st.session_state["source_code_input"] = ""
     st.session_state["editor_counter"] += 1
 
 
 def strip_inline_comment(line):
-    """
-    Remove // comments from a line, but only if the // is not
-    sitting inside an unterminated string/char literal.
-    Simple and safe for this project's scope: we just scan
-    left to right and stop tokenizing once we hit // that is
-    not inside quotes.
-    """
     in_string = False
     in_char = False
     i = 0
@@ -84,11 +73,7 @@ def strip_inline_comment(line):
 
 # Lexical analyzer Engine
 def lexical_analyzer(code):
-    """
-    Core engine that processes the source code line by line,
-    matches regular expressions to identify lexemes, categorizes them
-    into tokens, populates the symbol table, and tracks lexical errors.
-    """
+
     tokens = []
     symbol_table = []
     errors = []
@@ -292,7 +277,7 @@ if run and code and code.strip():
 elif run:
     st.warning("Input window is currently empty! Please type or paste your source snippets first.")
 
-# Footer section showing project development details
+# Footer section
 st.markdown("---")
 st.markdown("""
 <div class="footer-container">
