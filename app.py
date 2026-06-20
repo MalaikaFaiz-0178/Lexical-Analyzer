@@ -29,7 +29,10 @@ st.markdown('<div class="main-title">Lexical Analyzer</div>', unsafe_allow_html=
 # Tokens definition
 KEYWORDS = {"int", "float", "double", "char", "if", "else", "for", "while", "return", "void"}
 DATA_TYPE_KEYWORDS = {"int", "float", "double", "char", "void"}
-OPERATORS = {"+", "-", "*", "/", "%", "=", "<", ">", "==", "!=", "<=", ">="}
+OPERATORS = {
+    "+", "-", "*", "/", "%", "=", "<", ">", "==", "!=", "<=", ">=",
+    "++", "--", "+=", "-=", "*=", "/=", "%="
+}
 SEPARATORS = {";", ",", "(", ")", "{", "}", "[", "]"}
 
 # Default code in code section
@@ -37,8 +40,10 @@ DEFAULT_CODE = """// Sample program for lexical analysis
 
 int main() {
     int a = 10;
+    a++;
     float b = 20.5;
-    char c@ = 'x';
+    b += a;
+    char c = 'x';
 }
 """
 
@@ -46,9 +51,13 @@ int main() {
 if "source_code_input" not in st.session_state:
     st.session_state["source_code_input"] = DEFAULT_CODE
 
-# Unique counter for st_ace component key to force reset on clear
+# Unique counter for st_ace component key to force reset on clear or file upload
 if "editor_counter" not in st.session_state:
     st.session_state["editor_counter"] = 0
+
+# Last uploaded file tracker to detect new uploads
+if "last_uploaded_file" not in st.session_state:
+    st.session_state["last_uploaded_file"] = None
 
 
 def clear_text():
@@ -83,16 +92,16 @@ def lexical_analyzer(code):
 
     # Regular expression patterns for defining token boundaries and lexical rules
     pattern = r'''
+        (?P<STRING>"[^"\n]*") |
         (?P<UNCLOSED_STRING>"[^"\n]*) |
-        (?P<STRING>"[^"]*") |
         (?P<INVALID_CHAR_LITERAL>'[^'\n]{2,}') |
         (?P<CHARACTER>'[^'\n]') |
         (?P<MALFORMED_FLOAT>\d+\.\d+\.\d+[.\d]*) |
+        (?P<INVALID_ID>[A-Za-z_][A-Za-z0-9_]*[@#$%!^&~`]+[A-Za-z0-9_@#$%!^&~`]*|[A-Za-z0-9_]*[@#$%!^&~`]+[A-Za-z0-9_@#$%!^&~`]*|[0-9]+[A-Za-z_]+[A-Za-z0-9_]*) |
         (?P<FLOAT>\d+\.\d+) |
         (?P<INTEGER>\d+) |
-        (?P<OPERATOR>==|!=|<=|>=|[+\-*/%=<>]) |
+        (?P<OPERATOR>==|!=|<=|>=|\+\+|--|\+=|-=|\*=|\/=|%=|[+\-*/%=<>]) |
         (?P<SEPARATOR>[;,(){}\[\]]) |
-        (?P<INVALID_ID>[A-Za-z_][A-Za-z0-9_]*[@#$%!^&~`]+[A-Za-z0-9_@#$%!^&~`]*|[A-Za-z0-9_]*[@#$%!^&~`]+[A-Za-z0-9_@#$%!^&~`]*|[0-9]+[A-Za-z_]+[A-Za-z0-9_]*) |
         (?P<VALID_ID>[A-Za-z_][A-Za-z0-9_]*) |
         (?P<UNKNOWN>[^\s])
     '''
@@ -180,14 +189,19 @@ uploaded_file = st.file_uploader(
     type=["c", "cpp", "txt"]
 )
 
-# Handle uploaded file stream and extract code text
+# CRITICAL FIX: File update logic with dynamic widget key reset trigger
 if uploaded_file is not None:
-    try:
-        file_text = uploaded_file.read().decode("utf-8")
-        st.session_state["source_code_input"] = file_text
-        st.success(f"Loaded '{uploaded_file.name}' into the editor below.")
-    except UnicodeDecodeError:
-        st.error("Could not read the file. Please upload a plain text source file.")
+    # Agar nayi file upload hui hai (purani file se mukhtalif hai) toh hi load karein
+    if st.session_state["last_uploaded_file"] != uploaded_file.name:
+        try:
+            file_text = uploaded_file.read().decode("utf-8")
+            st.session_state["source_code_input"] = file_text
+            st.session_state["last_uploaded_file"] = uploaded_file.name
+            # Key counter barhane se editor refresh ho kar nayi file ka text utha lega
+            st.session_state["editor_counter"] += 1
+            st.rerun()
+        except UnicodeDecodeError:
+            st.error("Could not read the file. Please upload a plain text source file.")
 
 # Text editor configuration using Streamlit Ace with dynamic combined key string
 code = st_ace(
